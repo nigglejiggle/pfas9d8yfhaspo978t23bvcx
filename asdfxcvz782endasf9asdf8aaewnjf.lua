@@ -25,6 +25,14 @@ local l0x = {
 			Title = "hood rivals",
 			Body = "shooting game",
 			Loader = "https://api.luarmor.net/files/v4/loaders/7bb1bd3da1bf2b6a30950e47c9f23b8b.lua",
+		},
+		{
+			GameId = 107535308163741,
+			PlaceId = 107535308163741,
+			Image = "",
+			Title = "huzz valley",
+			Body = "huss",
+			Loader = "https://api.luarmor.net/files/v4/loaders/ea8298f68b44ee6a7be4caf6102afdcb.lua",
 		}
 	},
 }
@@ -224,44 +232,36 @@ local function w6e(rw)
 	return b5y(ft)
 end
 
-local function j0s()
-	local fd = {}
-	pcall(function()
+local function g4v()
+	local ok, gv = pcall(function()
 		if typeof(getgenv) == "function" then
-			local gv = getgenv()
-			if typeof(gv) == "table" and typeof(gv.script_key) == "string" then
-				table.insert(fd, gv.script_key)
-			end
+			return getgenv()
 		end
+		return nil
 	end)
-	pcall(function()
-		if typeof(rawget(_G, "script_key")) == "string" then
-			table.insert(fd, rawget(_G, "script_key"))
-		end
-	end)
-	for _, vv in ipairs(fd) do
-		local kk = w6e(vv)
-		if kk then
-			return kk
-		end
+	if ok and typeof(gv) == "table" then
+		return gv
+	end
+	return nil
+end
+
+local function j0s()
+	local gv = g4v()
+	if not gv then
+		return nil
+	end
+	local ok, v = pcall(rawget, gv, "script_key")
+	if ok and typeof(v) == "string" then
+		return w6e(v)
 	end
 	return nil
 end
 
 local function t9a(kk)
-	pcall(function()
-		if typeof(getgenv) == "function" then
-			getgenv().script_key = kk
-		end
-	end)
-	pcall(function()
-		rawset(_G, "script_key", kk)
-	end)
-	pcall(function()
-		if typeof(getfenv) == "function" then
-			getfenv().script_key = kk
-		end
-	end)
+	local gv = g4v()
+	if gv then
+		gv.script_key = kk
+	end
 end
 
 local function f2l(zE, kk)
@@ -277,10 +277,23 @@ local function f2l(zE, kk)
 	end
 	t9a(kk)
 	d1x()
-	task.defer(function()
-		pcall(function()
-			loadstring(game:HttpGet(ld))()
+	task.spawn(function()
+		local okG, src = pcall(function()
+			return game:HttpGet(ld)
 		end)
+		if not okG or typeof(src) ~= "string" or src == "" then
+			warn("[hub] couldnt fetch loader:", tostring(src))
+			return
+		end
+		local fn, err = loadstring(src)
+		if typeof(fn) ~= "function" then
+			warn("[hub] loader wouldnt compile:", tostring(err))
+			return
+		end
+		local okR, errR = pcall(fn)
+		if not okR then
+			warn("[hub] loader errored:", tostring(errR))
+		end
 	end)
 	return true
 end
