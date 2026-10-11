@@ -184,8 +184,8 @@ local function w6e(rw)
 
 	local sx = rw
 	sx = sx:gsub("\239\187\191", "")
-	sx = sx:gsub("```%w*", "")
-	sx = sx:gsub("```", "")
+	sx = sx:gsub("```%w*", " ")
+	sx = sx:gsub("```", " ")
 	sx = sx:gsub("‘", "'"):gsub("’", "'")
 	sx = sx:gsub("“", '"'):gsub("”", '"')
 
@@ -195,39 +195,44 @@ local function w6e(rw)
 		end
 		kk = kk:gsub("%s+", "")
 		kk = kk:gsub(";+$", "")
-		if #kk < 10 or #kk > 80 then
+		kk = kk:gsub("^['\"]+", ""):gsub("['\"]+$", "")
+		if #kk < 8 or #kk > 128 then
 			return nil
 		end
 		if not kk:match("^[%w_%-]+$") then
 			return nil
 		end
-		local lw = string.lower(kk)
-		if lw:find("script", 1, true) or lw:find("loadstring", 1, true) or lw:find("http", 1, true) then
-			return nil
-		end
 		return kk
 	end
 
-	local q1 = sx:match("[Ss][Cc][Rr][Ii][Pp][Tt]_[Kk][Ee][Yy]%s*=%s*[\"']([^\"']+)[\"']")
-	local f1 = b5y(q1)
-	if f1 then
-		return f1
+	local low = string.lower(sx)
+	local at = low:find("script_key", 1, true)
+	if at then
+		local rest = sx:sub(at + 10)
+		local line = rest:match("^[^\r\n]*") or rest
+		local q, inner = line:match("([\"'])(.-)%1")
+		if inner then
+			local k = b5y(inner)
+			if k then
+				return k
+			end
+		end
+		local long = line:match("%[%[(.-)%]%]")
+		local k2 = b5y(long)
+		if k2 then
+			return k2
+		end
+		local code = line:gsub("%-%-.*$", "")
+		local bare = code:match("=%s*([%w_%-]+)")
+		local k3 = b5y(bare)
+		if k3 then
+			return k3
+		end
 	end
 
-	local q2 = sx:match("[Ss][Cc][Rr][Ii][Pp][Tt]_[Kk][Ee][Yy]%s*=%s*%[%[(.-)%]%]")
-	local f2 = b5y(q2)
-	if f2 then
-		return f2
-	end
-
-	local q3 = sx:match("[Ss][Cc][Rr][Ii][Pp][Tt]_[Kk][Ee][Yy]%s*=%s*([%w_%-]+)")
-	local f3 = b5y(q3)
-	if f3 then
-		return f3
-	end
-
-	local ft = sx:gsub("[%c%s]+", "")
-	ft = ft:gsub("^['\"]", ""):gsub("['\"]$", "")
+	local ft = sx:gsub("%-%-[^\r\n]*", "")
+	ft = ft:gsub("[%c%s]+", "")
+	ft = ft:gsub("^['\"]+", ""):gsub("['\"]+$", "")
 	ft = ft:gsub(";+$", "")
 	return b5y(ft)
 end
@@ -247,12 +252,31 @@ end
 
 local function j0s()
 	local gv = g4v()
+	local function pull(v)
+		if typeof(v) ~= "string" then
+			return nil
+		end
+		return w6e(v)
+	end
+
+	local bare
+	pcall(function()
+		bare = script_key
+	end)
+	local fromBare = pull(bare)
+	if fromBare then
+		if gv then
+			gv.script_key = fromBare
+		end
+		return fromBare
+	end
+
 	if not gv then
 		return nil
 	end
 	local ok, v = pcall(rawget, gv, "script_key")
-	if ok and typeof(v) == "string" then
-		return w6e(v)
+	if ok then
+		return pull(v)
 	end
 	return nil
 end
